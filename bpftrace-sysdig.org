@@ -1,0 +1,239 @@
+#+title: Bpftrace, Sysdig & Systemtap
+#+property: header-args :eval never-export
+
+* Bpftrace
+** Some experiments with the limited BPF stack size
+The BPF stack used by bpftrace for storing the strings is only 512
+bytes in size.  Therefore it needs some consideration on which value
+to set =BPFTRACE_STRLEN= (max 200).
+
+#+caption: Create a long path for our experiments
+#+name: longpath
+#+begin_src sh :dir (identity host) :results output :cache yes
+  set -e
+  longpath=/tmp/aaa/bbb/ccc/ddd/eee/fff/ggg/hhh/iii/jjj/kkk/lll/mmm/nnn/ooo/ppp/qqq/rrr/sss/ttt/uuu/vvv/www/xxx/yyy/zzz/000/111/222/333/444/555/666/777/888/999
+  mkdir -p ${longpath}
+  echo ${longpath}
+#+end_src
+
+#+caption: Trace =openat= syscalls without further filtering
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  export BPFTRACE_STRLEN=200
+  bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }' &
+  sleep 1; touch ${longpath}/foo
+  killall bpftrace
+#+end_src
+
+We can no longer use the maximum of 200 for =BPFTRACE_STRLEN= if we
+filter by filename.
+
+#+caption: Trace =openat= syscalls with filtering for a short path
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  export BPFTRACE_STRLEN=160  # longer strings will exhaust the stack
+  bpftrace -e 'tracepoint:syscalls:sys_enter_openat /str(args->filename, 4) == "/tmp"/ { printf("%s %s\n", comm, str(args->filename)); }' &
+  sleep 1; touch ${longpath}/foo
+  killall bpftrace
+#+end_src
+
+The length of the string portion we compare does not influence the
+value we can choose for =BPFTRACE_STRLEN=.
+
+#+caption: Trace =openat= syscalls with filtering for a longer path
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  export BPFTRACE_STRLEN=160
+  bpftrace -e 'tracepoint:syscalls:sys_enter_openat /str(args->filename, 44) == "/tmp/aaa/bbb/ccc/ddd/eee/fff/ggg/hhh/iii/jjj"/ { printf("%s %s\n", comm, str(args->filename)); }' &
+  sleep 1; touch ${longpath}/foo
+  killall bpftrace
+#+end_src
+
+Putting the script into a file and using parameters to pass the path
+prefix to filter on does even more reduce the possible
+=BPFTRACE_STRLEN=.
+
+#+caption: Create a script for later usage
+#+begin_src bpftrace :tangle (concat host "bin/open-in-path%.bt") :tangle-mode (identity #o755) :noeval
+  #!/usr/bin/env bpftrace
+  // Arguments: $1 = path prefix
+  //            $2 = length of path prefix
+  tracepoint:syscalls:sys_enter_open,
+  tracepoint:syscalls:sys_enter_openat
+  /str(args->filename, $2) == str($1, $2)/
+  {
+    printf("%s %s\n", comm, str(args->filename));
+  }
+#+end_src
+
+#+caption: Use previous created script
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  export BPFTRACE_STRLEN=115  # longer strings will exhaust the stack
+  bin/open-in-path%.bt /tmp 4 &
+  sleep 1; touch ${longpath}/foo
+  killall bpftrace
+#+end_src
+
+If we do not print the path, then we can raise =BPFTRACE_STRLEN= again
+to the maximum of 200 although we filter on the filename.
+
+#+caption: Trace =openat= syscalls with filtering a path but without printing the path
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  export BPFTRACE_STRLEN=200
+  bpftrace -e 'tracepoint:syscalls:sys_enter_openat /str(args->filename, 44) == "/tmp/aaa/bbb/ccc/ddd/eee/fff/ggg/hhh/iii/jjj"/ { printf("%s\n", comm); }' &
+  sleep 1; touch ${longpath}/foo
+  killall bpftrace
+#+end_src
+
+** Pinpoint who opens a file
+#+caption: List probes that end with =openat=
+#+begin_src sh :dir (identity host) :results output
+  bpftrace -lv "*openat"
+#+end_src
+
+#+caption: List details of =tracepoint:syscalls:sys_enter_openat=
+#+begin_src sh :dir (identity host) :results output
+  cat /sys/kernel/debug/tracing/events/syscalls/sys_enter_openat/format
+#+end_src
+
+#+caption: Create a python script for later usage
+#+begin_src python :tangle (concat host "bin/slow-writer.py") :tangle-mode (identity #o755) :noeval
+  #!/usr/bin/env python3
+  import sys, time
+  def touchFile(path):
+      with open(path, 'w') as f:
+          f.write("leeroy was here")
+      time.sleep(2)
+
+  if __name__ == "__main__":
+      touchFile(sys.argv[1])
+#+end_src
+
+#+caption: Create a bpftrace script to monitor file access for later usage
+#+begin_src bpftrace :tangle (concat host "bin/open-in-path.bt") :tangle-mode (identity #o755) :noeval
+  #!/usr/bin/env -S bpftrace --unsafe
+  // Paths are hardcoded to go easy on the stack
+  tracepoint:syscalls:sys_enter_open,
+  tracepoint:syscalls:sys_enter_openat
+  /str(args->filename, 9) == "/tmp/aaa/"/
+  {
+    system("pstree -pas %d", pid);
+    printf("%s: FILE was accessed by %s(%d) with flags %x\n", probe, comm, pid, args->flags);
+    print("Can you spot its PID in the above pstree?");
+    print("---------------------------------------------------------");
+  }
+#+end_src
+
+#+caption: Use previous created script
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  export BPFTRACE_STRLEN=200
+  bin/open-in-path.bt &
+  sleep 1; bin/slow-writer.py ${longpath}/foo
+  killall bpftrace
+#+end_src
+
+* Sysdig
+#+caption: List events supported by sysdig
+#+begin_src sh :dir (identity host) :results output
+  sysdig --list-events | grep open
+#+end_src
+
+#+caption: List the fields available for filtering and output
+#+begin_src sh :dir (identity host) :results output
+  sysdig --list
+#+end_src
+
+#+caption: Sysdig chisel to monitor file access
+#+begin_src lua :tangle (concat host "bin/open-in-path.lua") :tangle-mode (identity #o755) :noeval
+  #!/usr/bin/env -S sysdig -c
+  -- See https://github.com/draios/sysdig/wiki/Chisels-User-Guide
+  args = {{ name = "path",
+            description = "File or directory path to monitor",
+            argtype = "string",
+            optional = false
+  }}
+
+  function on_set_arg(name, val)
+     if name == "path" then
+        pathPrefix = val
+        return true
+     end
+     return false
+  end
+
+  function on_init()
+     f_cmd = chisel.request_field("proc.cmdline")
+     f_pcmd = chisel.request_field("proc.pcmdline")
+     f_ppid = chisel.request_field("proc.ppid")
+     f_a2name = chisel.request_field("proc.aname[2]")
+     f_a2pid = chisel.request_field("proc.apid[2]")
+     f_a3name = chisel.request_field("proc.aname[3]")
+     f_a3pid = chisel.request_field("proc.apid[3]")
+     f_a4name = chisel.request_field("proc.aname[4]")
+     f_a4pid = chisel.request_field("proc.apid[4]")
+     f_a5name = chisel.request_field("proc.aname[5]")
+     f_a5pid = chisel.request_field("proc.apid[5]")
+     f_a6name = chisel.request_field("proc.aname[6]")
+     f_a6pid = chisel.request_field("proc.apid[6]")
+
+     chisel.set_filter("evt.type in (open, openat) and evt.dir = < and fd.name contains " .. pathPrefix)
+     chisel.set_event_formatter("")
+     return true
+  end
+
+  function on_event()
+     print("----------------------------------------------------------------------------")
+     print(evt.field(f_a6name) .. "(" .. evt.field(f_a6pid) .. ")")
+     print("  `-" .. evt.field(f_a5name) .. "(" .. evt.field(f_a5pid) .. ")")
+     print("      `-" .. evt.field(f_a4name) .. "(" .. evt.field(f_a4pid) .. ")")
+     print("          `-" .. evt.field(f_a3name) .. "(" .. evt.field(f_a3pid) .. ")")
+     print("              `-" .. evt.field(f_a2name) .. "(" .. evt.field(f_a2pid) .. ")")
+     print("                  `-" .. evt.field(f_pcmd) .. "(" .. evt.field(f_ppid) .. ")")
+     print("                       `-" .. evt.field(f_cmd))
+     return true
+  end
+#+end_src
+
+#+caption: Use previous created script
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  bin/open-in-path.lua /tmp/aaa/ &
+  sleep 1; touch ${longpath}/foo; sleep 1
+  killall sysdig
+#+end_src
+
+* Sytemtap
+#+caption: Systemtap script for later usage
+#+begin_src systemtap :tangle (concat host "bin/open-in-path.stp") :tangle-mode (identity #o755) :noeval
+  probe syscall.open {
+    printf ("%s(%d) open (%s)\n", execname(), pid(), argstr)
+  }
+
+  probe syscall.openat {
+    printf ("%s(%d) openat (%s)\n", execname(), pid(), argstr)
+  }
+
+  probe timer.ms(4000) {
+    exit ()
+  }
+#+end_src
+
+#+caption: Use the previos created script
+#+begin_src sh :dir (identity host) :results output :var longpath=longpath
+  set -e
+  stap -p4 -m systemtap bin/open-in-path.stp
+  staprun systemtap.ko &
+  sleep 2; touch ${longpath}/foo; sleep 2
+#+end_src
+
+* Variables                                                        :noexport:
+# Local Variables:
+# host: "/ssh:127.0.0.1#9222|sudo:127.0.0.1#9222:"
+# End:
+
+#+begin_src emacs-lisp :results none
+  (defvar host "")
+#+end_src

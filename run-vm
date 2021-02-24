@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+
+QEMU_NET_OPTS=hostfwd=tcp::9222-:22
+QEMU_OPTS="-m 2G"
+export QEMU_NET_OPTS QEMU_OPTS
+
+./result/bin/run-nixvm-vm &
+sleep 1
+echo "use 'ssh -p9222 localhost' to connect to the vm"
