@@ -122,6 +122,7 @@ in {
       pstree
       python3
       rsync
+      rt-tests
       stdenv
       syslinux
       sysstat
