@@ -79,7 +79,7 @@ in {
       install = true;
     };
 
-    mingetty.autologinUser = "kai";
+    getty.autologinUser = "kai";
 
     openssh = {
       enable = true;
@@ -122,7 +122,6 @@ in {
       pstree
       python3
       rsync
-      rt-tests
       stdenv
       syslinux
       sysstat
