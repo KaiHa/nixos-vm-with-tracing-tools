@@ -91,6 +91,8 @@ in {
     };
   };
 
+  virtualisation.msize = 700000000;
+
   environment = {
     homeBinInPath = true;
     etc."inputrc".text = lib.mkForce (
