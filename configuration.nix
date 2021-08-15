@@ -42,7 +42,6 @@ in {
     '';
     bcc.enable = true;
     ssh.startAgent = false;
-    sysdig.enable = true;
     systemtap.enable = true;
     tmux = {
       enable = true;
@@ -127,7 +126,6 @@ in {
       python3
       rsync
       stdenv
-      syslinux
       sysstat
       vnstat
     ];
