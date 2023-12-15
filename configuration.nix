@@ -1,12 +1,19 @@
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
+#
+# VM too slow?  Increase the "virtualisation.msize" of your NixOS
+# installation!
+
 { config, pkgs, ... }: with pkgs;
 let
   mylinux = linuxPackages_latest;
 in {
+  imports = [
+    <nixpkgs/nixos/modules/profiles/qemu-guest.nix>
+  ];
 
-  nixpkgs.config.allowUnfree = true;
+  # nixpkgs.config.allowUnfree = true;
 
   i18n.supportedLocales = [
     "en_US.UTF-8/UTF-8"
@@ -89,8 +96,6 @@ in {
       settings.PermitRootLogin = "no";
     };
   };
-
-  virtualisation.msize = 700000000;
 
   environment = {
     homeBinInPath = true;
