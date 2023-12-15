@@ -16,7 +16,7 @@ in {
     kernelPackages = mylinux;
     kernel.sysctl."kernel.perf_event_paranoid" = -1;
     kernel.sysctl."kernel.kptr_restrict" = 0;
-    cleanTmpDir = true;
+    tmp.cleanOnBoot = true;
   };
 
   networking = {
@@ -84,9 +84,9 @@ in {
 
     openssh = {
       enable = true;
-      challengeResponseAuthentication = false;
-      passwordAuthentication = false;
-      permitRootLogin = "no";
+      settings.KbdInteractiveAuthentication = false;
+      settings.PasswordAuthentication = false;
+      settings.PermitRootLogin = "no";
     };
   };
 
