@@ -4,6 +4,12 @@ run.native: ./result.native/bin/run-nixvm-vm
 	export QEMU_NET_OPTS QEMU_OPTS; \
 	$< &
 
+run.aarch64: ./result.aarch64/bin/run-nixvm-vm
+	QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
+	QEMU_OPTS="-m 2G"; \
+	export QEMU_NET_OPTS QEMU_OPTS; \
+	$< &
+
 result.native/bin/run-nixvm-vm:
 	nix-build '<nixpkgs/nixos>' -A vm --arg configuration ./configuration.nix --out-link ./result.native
 
