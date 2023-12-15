@@ -68,9 +68,6 @@ in {
 
   security.sudo.extraConfig =''kai ALL = NOPASSWD : ALL'';
 
-  services.emacs.enable = true;
-  services.emacs.defaultEditor = true;
-  services.emacs.install = true;
   services.getty.autologinUser = "kai";
   services.openssh.enable = true;
   services.openssh.settings.KbdInteractiveAuthentication = false;
@@ -97,6 +94,7 @@ in {
     binutils
     dnsutils
     dstat
+    emacs
     file
     fontconfig
     git
