@@ -1,12 +1,14 @@
 image_size := 4096M
 intermediate_img := $(shell mktemp)
 
+.PHONY: run.native
 run.native: result.native/bin/run-nixvm-vm
 	QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
 	QEMU_OPTS="-m 2G"; \
 	export QEMU_NET_OPTS QEMU_OPTS; \
 	$< &
 
+.PHONY: run.aarch64
 run.aarch64: result.aarch64/bin/run-nixvm-vm
 	QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
 	QEMU_OPTS="-m 2G"; \
@@ -27,10 +29,15 @@ nixvm.qcow2:
 	qemu-img convert -f raw -O qcow2 "$(intermediate_img)" $@
 	rm "$(intermediate_img)"
 
+.PHONY: ssh
 ssh:
 	ssh -p9922 -oStrictHostKeyChecking=off localhost
 
+.PHONY: clean
 clean:
-	-rm ./nixvm.qcow2
 	-rm ./result.aarch64
 	-rm ./result.native
+
+.PHONY: clean-all
+clean-all: clean
+	-rm ./nixvm.qcow2
