@@ -3,7 +3,7 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 { config, pkgs, ... }: with pkgs;
 let
-  mylinux = linuxPackages;
+  mylinux = linuxPackages_latest;
 in {
 
   nixpkgs.config.allowUnfree = true;
