@@ -7,19 +7,49 @@
 
 { config, pkgs, ... }: with pkgs;
 let
-  mylinux = linuxPackages_latest;
+  myKernelPackages = pkgs.linuxPackagesFor linux_latest;
 in {
   imports = [
     <nixpkgs/nixos/modules/profiles/qemu-guest.nix>
   ];
 
+  nixpkgs.overlays = [( self: super: rec {
+    ccacheWrapper = super.ccacheWrapper.override {
+      extraConfig = ''
+        export CCACHE_NOCOMPRESS=1
+        export CCACHE_MAXSIZE=10G
+        export CCACHE_UMASK=007
+        export CCACHE_DIR=/var/cache/ccache
+      '';
+    };
+    linux_latest = super.linux_latest.override {
+      extraConfig = ''
+        BUG_ON_DATA_CORRUPTION y
+        DEBUG_ATOMIC_SLEEP y
+        DEBUG_MUTEXES y
+        DEBUG_SPINLOCK y
+        DETECT_HUNG_TASK y
+        KGDB y
+        PANIC_ON_OOPS y
+        PANIC_TIMEOUT 0
+        PROVE_LOCKING y
+        PROVE_RCU y
+        SOFTLOCKUP_DETECTOR y
+      '';
+      stdenv = super.ccacheStdenv;
+    };
+  })];
+  
+  nix.settings.extra-sandbox-paths = [
+    "/var/cache/ccache"
+  ];
   # nixpkgs.config.allowUnfree = true;
 
   i18n.supportedLocales = [
     "en_US.UTF-8/UTF-8"
   ];
 
-  boot.kernelPackages = mylinux;
+  boot.kernelPackages = myKernelPackages;
   boot.kernel.sysctl."kernel.perf_event_paranoid" = -1;
   boot.kernel.sysctl."kernel.kptr_restrict" = 0;
   boot.tmp.cleanOnBoot = true;
@@ -99,8 +129,8 @@ in {
     fontconfig
     git
     gnumake
-    mylinux.bpftrace
-    mylinux.perf
+    myKernelPackages.bpftrace
+    myKernelPackages.perf
     lshw
     pciutils
     psmisc
