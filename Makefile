@@ -4,7 +4,7 @@ intermediate_img := $(shell mktemp)
 .PHONY: run.native
 run.native: result.native/bin/run-nixvm-vm
 	QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
-	QEMU_OPTS="-m 2G"; \
+	QEMU_OPTS="-m 2G -smp 4"; \
 	export QEMU_NET_OPTS QEMU_OPTS; \
 	$< &
 
