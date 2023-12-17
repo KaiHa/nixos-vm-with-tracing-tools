@@ -1,5 +1,6 @@
 image_size := 4096M
 intermediate_img := $(shell mktemp)
+kernelEnv := 'with import <nixos> { overlays = import ./overlays.nix; }; linux_latest.overrideAttrs (o: {nativeBuildInputs=o.nativeBuildInputs ++ [ pkg-config ncurses ];})'
 
 .PHONY: run.native
 run.native: result.native/bin/run-nixvm-vm
@@ -28,6 +29,16 @@ nixvm.qcow2:
 	mkfs.ext4 -L nixos "$(intermediate_img)"
 	qemu-img convert -f raw -O qcow2 "$(intermediate_img)" $@
 	rm "$(intermediate_img)"
+
+kernel-prepare-workspace:
+	nix-shell \
+	  --expr $(kernelEnv) \
+	  --command 'unpackPhase; cd linux-*; patchPhase; nix-build --expr "import <nixos> { overlays = import ../overlays.nix; }" --attr linux_latest.configfile; cat ./result > ./.config; return'
+
+kernel-build-shell:
+	nix-shell \
+	  --expr $(kernelEnv) \
+	  --command 'cd linux-*; return'
 
 .PHONY: ssh
 ssh:

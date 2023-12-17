@@ -13,32 +13,7 @@ in {
     <nixpkgs/nixos/modules/profiles/qemu-guest.nix>
   ];
 
-  nixpkgs.overlays = [( self: super: rec {
-    ccacheWrapper = super.ccacheWrapper.override {
-      extraConfig = ''
-        export CCACHE_NOCOMPRESS=1
-        export CCACHE_MAXSIZE=10G
-        export CCACHE_UMASK=007
-        export CCACHE_DIR=/var/cache/ccache
-      '';
-    };
-    linux_latest = super.linux_latest.override {
-      extraConfig = ''
-        BUG_ON_DATA_CORRUPTION y
-        DEBUG_ATOMIC_SLEEP y
-        DEBUG_MUTEXES y
-        DEBUG_SPINLOCK y
-        DETECT_HUNG_TASK y
-        KGDB y
-        PANIC_ON_OOPS y
-        PANIC_TIMEOUT 0
-        PROVE_LOCKING y
-        PROVE_RCU y
-        SOFTLOCKUP_DETECTOR y
-      '';
-      stdenv = super.ccacheStdenv;
-    };
-  })];
+  nixpkgs.overlays = import ./overlays.nix;
   
   nix.settings.extra-sandbox-paths = [
     "/var/cache/ccache"
