@@ -4,23 +4,21 @@ kernelEnv := 'with import <nixos> { overlays = import ./overlays.nix; }; linux_l
 
 .PHONY: run.native
 run.native: result.native/bin/run-nixvm-vm
-	QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
-	QEMU_OPTS="-m 2G -smp 4"; \
-	export QEMU_NET_OPTS QEMU_OPTS; \
+	export QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
+	export QEMU_OPTS="-m 2G -smp 4"; \
 	$< &
 
 .PHONY: run.aarch64
 run.aarch64: result.aarch64/bin/run-nixvm-vm
-	QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
-	QEMU_OPTS="-m 2G"; \
-	export QEMU_NET_OPTS QEMU_OPTS; \
+	export QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
+	export QEMU_OPTS="-m 2G"; \
 	$< &
 
 result.native/bin/run-nixvm-vm:
-	nix-build '<nixpkgs/nixos>' -A vm --arg configuration ./configuration.nix --out-link ./result.native
+	nix-build '<nixpkgs/nixos>' --show-trace --attr vm --arg configuration ./configuration.nix --out-link ./result.native
 
 result.aarch64/bin/run-nixvm-vm:
-	nix-build '<nixpkgs/nixos>' -A vm --arg configuration ./configuration.nix --out-link ./result.aarch64 --system aarch64-linux
+	nix-build '<nixpkgs/nixos>' --show-trace --attr vm --arg configuration ./configuration.nix --out-link ./result.aarch64 --system aarch64-linux
 
 # Creating a bigger image than the default image that would be created
 # by run-nixvm-vm.
