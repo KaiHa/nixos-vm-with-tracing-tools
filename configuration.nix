@@ -20,9 +20,6 @@ in {
 
   nixpkgs.overlays = import ./overlays.nix;
   
-  nix.settings.extra-sandbox-paths = [
-    "/var/cache/ccache"
-  ];
   # nixpkgs.config.allowUnfree = true;
 
   virtualisation.vmVariant = {
