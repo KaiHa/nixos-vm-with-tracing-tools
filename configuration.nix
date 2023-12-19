@@ -59,6 +59,8 @@ in {
     '';
   };
 
+  system.stateVersion = "23.11";
+
   users.users.kai.isNormalUser = true;
   users.users.kai.uid = 1000;
   users.users.kai.extraGroups = [
