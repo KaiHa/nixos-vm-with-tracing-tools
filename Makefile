@@ -30,11 +30,13 @@ nixvm.qcow2:
 	qemu-img convert -f raw -O qcow2 "$(intermediate_img)" $@
 	rm "$(intermediate_img)"
 
+.PHONY: kernel-prepare-workspace
 kernel-prepare-workspace:
 	nix-shell \
 	  --expr $(kernelEnv) \
 	  --command 'unpackPhase; cd linux-*; patchPhase; nix-build --expr "import <nixos> { overlays = import ../overlays.nix; }" --attr linux_latest.configfile; cat ./result > ./.config; return'
 
+.PHONY: kernel-build-shell
 kernel-build-shell:
 	nix-shell \
 	  --expr $(kernelEnv) \
