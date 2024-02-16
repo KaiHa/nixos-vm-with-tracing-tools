@@ -1,6 +1,8 @@
 image_size := 4096M
 intermediate_img := $(shell mktemp)
 kernelEnv := 'with import <nixos> { overlays = import ./overlays.nix; }; linux_latest.overrideAttrs (o: {nativeBuildInputs=o.nativeBuildInputs ++ [ pkg-config ncurses ];})'
+# nix_build_extra_options := --keep-failed --show-trace
+nix_build_options := $(nix_build_extra_options) --attr vm --arg configuration ./configuration.nix
 
 .PHONY: run.native
 run.native: result.native/bin/run-nixvm-vm
@@ -15,10 +17,10 @@ run.aarch64: result.aarch64/bin/run-nixvm-vm
 	$< &
 
 result.native/bin/run-nixvm-vm:
-	nix-build '<nixpkgs/nixos>' --show-trace --attr vm --arg configuration ./configuration.nix --out-link ./result.native
+	nix-build '<nixpkgs/nixos>' $(nix_build_options) --out-link ./result.native
 
 result.aarch64/bin/run-nixvm-vm:
-	nix-build '<nixpkgs/nixos>' --show-trace --attr vm --arg configuration ./configuration.nix --out-link ./result.aarch64 --system aarch64-linux
+	nix-build '<nixpkgs/nixos>' $(nix_build_options) --out-link ./result.aarch64 --system aarch64-linux
 
 # Creating a bigger image than the default image that would be created
 # by run-nixvm-vm.
