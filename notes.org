@@ -1,0 +1,58 @@
+* Creating a crashdump
+#+caption: Start the vm (with graphics)
+#+begin_src tmux :session default:run-vm :var wdir=(identity default-directory)
+  cd ${wdir}
+  make graphic=1 run.native
+#+end_src
+
+#+caption: Trigger a crash in the VM
+#+begin_src tmux :session default:sysrq
+  ssh -f -oBatchMode=yes -p 9922 root@localhost "echo c > /proc/sysrq-trigger"
+#+end_src
+
+Copy the =/proc/vmcore= file into the /home/kai directory of the vm.
+
+Restart the vm.
+
+#+begin_src bash :results silent
+  mkdir -p ./crashdump
+  scp -P 9922 root@localhost:/home/kai/vmcore ./crashdump/
+#+end_src
+
+* KDUMP
+#+name: booted-kernel
+#+begin_src sh :cache yes
+  ps -e -o args | awk '$1 ~ /qemu/ {print gensub(/.* -kernel ([^ ]+) .*/, "\\1", 1, $0)}'
+#+end_src
+
+#+name: vmlinux-path
+#+begin_src sh :var kernel=booted-kernel :results output
+  nix-store -q --requisites ${kernel} | awk '/linux-.*-dev/ {printf("%s/vmlinux", $1)}'
+#+end_src
+
+#+caption: Run GDB
+#+begin_src tmux :session default:gdb :var wdir=(identity default-directory) vmlinux_path=vmlinux-path
+  cd ${wdir}/crashdump
+  gdb ${vmlinux_path} ./vmcore
+#+end_src
+
+* Crash utility
+#+begin_src sh :dir (identity vm) :results output
+  curl -L -o crash.tar.gz https://github.com/crash-utility/crash/archive/refs/tags/8.0.4.tar.gz
+  tar -xzf crash.tar.gz
+  cd crash-*
+  make
+#+end_src
+
+* toybox mkroot image
+
+#+begin_src sh :results output
+  curl -L -O https://landley.net/bin/mkroot/latest/aarch64.tgz
+  tar -xf aarch64.tgz
+#+end_src
+
+* Variables                                                        :noexport:
+# Local Variables:
+# vm: "/ssh:127.0.0.1#9922:"
+# root@vm: "/ssh:127.0.0.1#9922|sudo:127.0.0.1#9922:"
+# End:
