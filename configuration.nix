@@ -20,6 +20,14 @@ in {
   ];
   # nixpkgs.config.allowUnfree = true;
 
+  virtualisation.vmVariant = {
+    virtualisation.qemu.package = pkgs.qemu;
+    virtualisation.cores = 4;
+    virtualisation.graphics = false;
+    virtualisation.memorySize = 4096;
+    virtualisation.qemu.virtioKeyboard = false;
+  };
+
   i18n.supportedLocales = [
     "en_US.UTF-8/UTF-8"
   ];
@@ -27,6 +35,7 @@ in {
   boot.kernelPackages = myKernelPackages;
   boot.kernel.sysctl."kernel.perf_event_paranoid" = -1;
   boot.kernel.sysctl."kernel.kptr_restrict" = 0;
+  boot.consoleLogLevel = 7;  # To have "early" livesigns of the aarch64 vm
   boot.tmp.cleanOnBoot = true;
 
   networking.hostName = "nixvm";
