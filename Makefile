@@ -36,13 +36,13 @@ nixvm.qcow2:
 kernel-prepare-workspace:
 	nix-shell \
 	  --expr $(kernelEnv) \
-	  --command 'unpackPhase; cd linux-*; patchPhase; nix-build --expr "import <nixos> { overlays = import ../overlays.nix; }" --attr linux_latest.configfile; cat ./result > ./.config; return'
+	  --command 'runPhase unpackPhase; runPhase patchPhase; runPhase configurePhase'
 
 .PHONY: kernel-build-shell
 kernel-build-shell:
 	nix-shell \
 	  --expr $(kernelEnv) \
-	  --command 'cd linux-*; return'
+	  --command 'cd linux-*/build; echo -e "\n# declare -f runPhase\n"; return'
 
 .PHONY: ssh
 ssh:
