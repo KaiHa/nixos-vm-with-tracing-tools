@@ -7,7 +7,7 @@ nix_build_options := $(nix_build_extra_options) --attr vm --arg configuration ./
 .PHONY: run.native
 run.native: result.native/bin/run-nixvm-vm
 	export QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
-	$< &
+	$<
 
 .PHONY: run.aarch64
 run.aarch64: result.aarch64/bin/run-nixvm-vm
