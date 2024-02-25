@@ -1,4 +1,4 @@
-image_size := 4096M
+image_size := 8192M
 intermediate_img := $(shell mktemp)
 kernelEnv := 'with import <nixos> { overlays = import ./overlays.nix; }; linux_latest.overrideAttrs (o: {nativeBuildInputs=o.nativeBuildInputs ++ [ pkg-config ncurses ];})'
 # nix_build_extra_options := --keep-failed --show-trace
@@ -24,10 +24,10 @@ run.aarch64: result.aarch64/bin/run-nixvm-vm
 	export QEMU_OPTS="-machine virt -cpu cortex-a57 $(qemu_options)"; \
 	./run-nixvm.aarch64
 
-result.native/bin/run-nixvm-vm:
+result.native/bin/run-nixvm-vm: nixvm.qcow2
 	nix-build '<nixpkgs/nixos>' $(nix_build_options) --out-link ./result.native
 
-result.aarch64/bin/run-nixvm-vm:
+result.aarch64/bin/run-nixvm-vm: nixvm.qcow2
 	nix-build '<nixpkgs/nixos>' $(nix_build_options) --out-link ./result.aarch64 --system aarch64-linux
 
 # Creating a bigger image than the default image that would be created
