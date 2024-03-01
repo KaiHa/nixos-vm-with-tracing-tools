@@ -23,7 +23,6 @@ in {
   virtualisation.vmVariant = {
     virtualisation.qemu.package = pkgs.qemu;
     virtualisation.cores = 4;
-    virtualisation.graphics = false;
     virtualisation.memorySize = 4096;
     virtualisation.qemu.virtioKeyboard = false;
   };

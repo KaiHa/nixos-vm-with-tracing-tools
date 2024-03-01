@@ -4,9 +4,15 @@ kernelEnv := 'with import <nixos> { overlays = import ./overlays.nix; }; linux_l
 # nix_build_extra_options := --keep-failed --show-trace
 nix_build_options := $(nix_build_extra_options) --attr vm --arg configuration ./configuration.nix
 
+qemu_options := -no-reboot
+ifndef graphic
+  qemu_options += -nographic
+endif
+
 .PHONY: run.native
 run.native: result.native/bin/run-nixvm-vm
 	export QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
+	export QEMU_OPTS="$(qemu_options)"; \
 	$<
 
 .PHONY: run.aarch64
@@ -15,7 +21,7 @@ run.aarch64: result.aarch64/bin/run-nixvm-vm
 	awk '$$1 == "exec" && $$2 ~ /qemu-system-aarch64/ {$$2="qemu-system-aarch64"; print; next}; {print}' $< > ./run-nixvm.aarch64
 	chmod 755 ./run-nixvm.aarch64
 	export QEMU_NET_OPTS=hostfwd=tcp::9922-:22; \
-	export QEMU_OPTS="-machine virt -cpu cortex-a57 -no-reboot"; \
+	export QEMU_OPTS="-machine virt -cpu cortex-a57 $(qemu_options)"; \
 	./run-nixvm.aarch64
 
 result.native/bin/run-nixvm-vm:
