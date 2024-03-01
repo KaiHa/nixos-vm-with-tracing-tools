@@ -40,6 +40,7 @@ in {
   boot.kernel.sysctl."kernel.perf_event_paranoid" = -1;
   boot.kernel.sysctl."kernel.kptr_restrict" = 0;
   boot.consoleLogLevel = 7;  # To have "early" livesigns of the aarch64 vm
+  boot.crashDump.enable = true;  # Leads to a rebuild of the kernel
   boot.tmp.cleanOnBoot = true;
 
   networking.hostName = "nixvm";
