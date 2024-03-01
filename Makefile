@@ -38,8 +38,8 @@ nixvm.qcow2:
 	qemu-img convert -f raw -O qcow2 "$(intermediate_img)" $@
 	rm "$(intermediate_img)"
 
-.PHONY: kernel-prepare-workspace
-kernel-prepare-workspace:
+.PHONY: prepare-kernel-workspace
+prepare-kernel-workspace:
 	nix-shell \
 	  --expr $(kernelEnv) \
 	  --command 'runPhase unpackPhase; runPhase patchPhase; runPhase configurePhase'
