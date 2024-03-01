@@ -52,7 +52,7 @@ kernel-build-shell:
 
 .PHONY: ssh
 ssh:
-	ssh -p9922 -oStrictHostKeyChecking=off localhost
+	ssh -p9922 -oStrictHostKeyChecking=off kai@localhost
 
 .PHONY: clean
 clean:
